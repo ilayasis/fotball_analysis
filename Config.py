@@ -1,0 +1,2 @@
+#  --- MODEl ---
+CONFIDENCE_FOR_PREDICT = 0.1

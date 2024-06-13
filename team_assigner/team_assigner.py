@@ -9,16 +9,6 @@ class TeamAssigner:
         self.kmeans = None
         self.player_team_dict = {}
 
-
-    def get_clustering_model(
-        self, image
-    ):
-        image_2d_format = image.reshape(-1, 3)
-
-        kmeans = KMeans(n_clusters=2, init="k-means++", n_init=1).fit(image_2d_format)
-
-        return kmeans
-
     def get_player_color(
             self, frame, bbox
     ):
@@ -75,3 +65,13 @@ class TeamAssigner:
         self.player_team_dict[player_id] = team_id
 
         return team_id
+
+    @staticmethod
+    def get_clustering_model(
+            image
+    ):
+        image_2d_format = image.reshape(-1, 3)
+
+        kmeans = KMeans(n_clusters=2, init="k-means++", n_init=1).fit(image_2d_format)
+
+        return kmeans

@@ -22,6 +22,7 @@ from ultralytics.engine.results import Results
 import supervision as sv
 from utils import get_bbox_width, get_center_of_bbox
 import Config
+import pandas as pd
 
 
 class Tracker:
@@ -177,6 +178,20 @@ class Tracker:
         return output_video_frames
 
     @staticmethod
+    def interpolate_ball_positions(ball_positions):
+        ball_positions = [x.get(1, {}).get('bbox', []) for x in ball_positions]
+        df_ball_positions = pd.DataFrame(ball_positions, columns=['x1', 'y1', 'x2', 'y2'])
+
+        # Interpolate where the missing balls
+        df_ball_positions = df_ball_positions.interpolate()
+
+        df_ball_positions = df_ball_positions.bfill()
+
+        ball_positions = [{1: {'bbox': val}} for val in df_ball_positions.to_numpy().tolist()]
+
+        return ball_positions
+
+    @staticmethod
     def draw_triangle(
             frame: np.ndarray, bbox: list[int], color: tuple[int, int, int]
     ) -> np.ndarray:
@@ -270,3 +285,5 @@ class Tracker:
             )
 
         return frame
+
+

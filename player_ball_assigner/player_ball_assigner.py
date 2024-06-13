@@ -14,7 +14,7 @@ class PlayerBallAssigner:
         min_dis = 100000
         assigned_player = -1
 
-        for player_id, player in players.item():
+        for player_id, player in players.items():
             player_bbox = player['bbox']
 
             dis_left = measure_distance((player_bbox[0], player_bbox[-1]), ball_pos)

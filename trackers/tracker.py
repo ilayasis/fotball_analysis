@@ -138,7 +138,7 @@ class Tracker:
         return tracks
 
     def draw_annotations(
-            self, video_frames: list[np.array], tracks: dict[str, list[dict]]
+            self, video_frames: list[np.array], tracks: dict[str, list[dict]], team_ball_control: list[int]
     ) -> list[np.array]:
         """
             Draws annotations on video frames based on tracking information.
@@ -176,9 +176,47 @@ class Tracker:
             for track_id, ball in ball_dict.items():
                 frame = self.draw_triangle(frame, ball["bbox"], (0, 255, 0))
 
+            # Draw team ball control
+            frame = self.draw_team_ball_control(frame, frame_num, team_ball_control)
+
             output_video_frames.append(frame)
 
         return output_video_frames
+
+    @staticmethod
+    def draw_team_ball_control(frame, frame_num, team_ball_control):
+        """
+        Draws team ball control statistics on the given frame.
+
+        Args:
+            frame (np.ndarray): The video frame to draw on.
+            frame_num (int): The current frame number.
+            team_ball_control (np.ndarray): Array indicating ball control by frame (1 for Team 1, 2 for Team 2).
+
+        Returns:
+            np.ndarray: The frame with the ball control statistics drawn on it.
+        """
+        # Draw a semi-transparent rectangle in the right bottom corner
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (1100, 850), (1800, 970), (255, 255, 255), -1)
+        alpha = 0.4
+        cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+
+        # Calculate ball control statistics
+        team_ball_control_till_frame = team_ball_control[:frame_num + 1]
+        team_1_frames_count = team_ball_control_till_frame[team_ball_control_till_frame == 1].shape[0]
+        team_2_frames_count = team_ball_control_till_frame[team_ball_control_till_frame == 2].shape[0]
+
+        team1 = team_1_frames_count / (team_1_frames_count + team_2_frames_count)
+        team2 = team_2_frames_count / (team_1_frames_count + team_2_frames_count)
+
+        # Draw the text on the frame
+        cv2.putText(frame, f"Possession Time - Team 1: {team1 * 100:.2f}%", (1150, 900),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
+        cv2.putText(frame, f"Possession Time - Team 2: {team2 * 100:.2f}%", (1150, 950),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
+
+        return frame
 
     @staticmethod
     def interpolate_ball_positions(ball_positions):

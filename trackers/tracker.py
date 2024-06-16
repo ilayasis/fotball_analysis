@@ -20,9 +20,10 @@ import cv2
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 import supervision as sv
-from utils import get_bbox_width, get_center_of_bbox
-import Config
 import pandas as pd
+
+import config
+from utils import get_bbox_width, get_center_of_bbox
 
 
 class Tracker:
@@ -62,14 +63,14 @@ class Tracker:
 
         for frame in range(0, len(frames), batch_size):
             detection_batch = self.model.predict(
-                frames[frame:frame + batch_size], conf=Config.CONFIDENCE_FOR_PREDICT
+                frames[frame:frame + batch_size], conf=config.CONFIDENCE_FOR_PREDICT
             )
             detections += detection_batch
         return detections
 
     def get_object_tracks(
             self, frames: list[np.ndarray], read_from_stub=False, stub_path=None
-    ) -> dict[str, list[dict]]:
+    ) -> dict[str, list[dict[int,  dict[str, list[float]]]]]:
         """
           Tracks objects in video frames and returns their tracks.
 
@@ -138,18 +139,24 @@ class Tracker:
         return tracks
 
     def draw_annotations(
-            self, video_frames: list[np.array], tracks: dict[str, list[dict]], team_ball_control: list[int]
+            self, video_frames: list[np.array], tracks: dict[str, list[dict]],
+            team_ball_control: list[int]
     ) -> list[np.array]:
         """
-            Draws annotations on video frames based on tracking information.
+        Draws annotations on video frames based on tracking information, including
+        team-specific ball control indicators.
 
-            Args:
-                video_frames (list): A list of video frames to be annotated.
-                tracks (dict): A dictionary containing tracking information with keys
-                'players', 'referees', and 'ball'.
+        Args:
+            video_frames (list[np.array]): A list of video frames to be annotated.
+            tracks (dict[str, list[dict]]): A dictionary containing tracking information
+                with keys 'players', 'referees', and 'ball'.
+            team_ball_control (list[int]): A list indicating which team has control of
+                the ball for each frame. Each integer represents the team ID (or index)
+                that controls the ball in the corresponding frame.
 
-            Returns:
-                list: A list of video frames with annotations.
+        Returns:
+            list[np.array]: A list of video frames with annotations.
+
         """
         output_video_frames = []
 
@@ -191,7 +198,8 @@ class Tracker:
         Args:
             frame (np.ndarray): The video frame to draw on.
             frame_num (int): The current frame number.
-            team_ball_control (np.ndarray): Array indicating ball control by frame (1 for Team 1, 2 for Team 2).
+            team_ball_control (np.ndarray): Array indicating ball control by frame
+                                (1 for Team 1, 2 for Team 2).
 
         Returns:
             np.ndarray: The frame with the ball control statistics drawn on it.
@@ -204,8 +212,8 @@ class Tracker:
 
         # Calculate ball control statistics
         team_ball_control_till_frame = team_ball_control[:frame_num + 1]
-        team_1_frames_count = team_ball_control_till_frame[team_ball_control_till_frame == 1].shape[0]
-        team_2_frames_count = team_ball_control_till_frame[team_ball_control_till_frame == 2].shape[0]
+        team_1_frames_count = (team_ball_control_till_frame == 1).sum()
+        team_2_frames_count = team_ball_control_till_frame[team_ball_control_till_frame == 2].sum()
 
         team1 = team_1_frames_count / (team_1_frames_count + team_2_frames_count)
         team2 = team_2_frames_count / (team_1_frames_count + team_2_frames_count)
@@ -219,7 +227,26 @@ class Tracker:
         return frame
 
     @staticmethod
-    def interpolate_ball_positions(ball_positions):
+    def interpolate_ball_positions(
+            ball_positions: list[dict[str, list[float]]]
+    ) -> list[dict[int, dict[str, list[float]]]]:
+        """
+            Interpolates missing ball positions based on provided bounding box coordinates.
+
+            Args:
+                ball_positions (list[dict[str, list[float]]]): A list of dictionaries where
+                     each dictionary represents a ball and contains a 'bbox'
+                     key mapped to a list of four float values
+                    [x1, y1, x2, y2], representing the bounding box coordinates of the ball.
+
+            Returns:
+                list[dict[int, dict[str, list[float]]]]: A list of dictionaries where each
+                dictionary represents a ball with interpolated bounding box coordinates.
+                Each dictionary has an integer key (1 in this case)
+                mapped to another dictionary containing a 'bbox' key
+                mapped to a list of four float values [x1, y1, x2, y2].
+        """
+
         ball_positions = [x.get(1, {}).get('bbox', []) for x in ball_positions]
         df_ball_positions = pd.DataFrame(ball_positions, columns=['x1', 'y1', 'x2', 'y2'])
 
@@ -326,5 +353,3 @@ class Tracker:
             )
 
         return frame
-
-

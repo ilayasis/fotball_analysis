@@ -6,6 +6,7 @@ Imports:
 - save_video: Function to save a list of frames as a video file.
 - get_center_of_bbox: Function to calculate the center coordinates of a bounding box.
 - get_bbox_width: Function to calculate the width of a bounding box.
+- measure_distance: Function to calculate the Euclidean distance between two points.
 
 These functions are imported from the respective modules `video_utils` and `bbox_utils`.
 """
